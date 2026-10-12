@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Simulator - Automação vs Cliente</title>
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #7b2cbf;
+            background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .top-controls {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            z-index: 100;
+        }
+
+        .toggle-btn {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.5);
+            transition: color 0.2s, transform 0.2s;
+            outline: none;
+        }
+
+        .toggle-btn:hover {
+            color: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+        }
+
+        .config-panel {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 800px;
+            transition: all 0.3s ease;
+        }
+
+        .config-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .config-panel input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .config-panel button {
+            padding: 8px 16px;
+            background: #008069;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .config-panel button:hover {
+            background: #006653;
+        }
+
+        .manual-trigger-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .manual-trigger-btn:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+        }
+
+        .manual-trigger-btn.success {
+            background-color: #25D366; /* WhatsApp Green */
+            border-color: #25D366;
+            color: white;
+            transform: scale(1.15) rotate(360deg);
+        }
+
+        .simulator-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Phone frame */
+        .phone {
+            width: 340px;
+            height: 680px;
+            background-color: #efeae2;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            border-radius: 40px;
+            border: 12px solid #1a1a1a;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Notch */
+        .phone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 25px;
+            background-color: #1a1a1a;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 10;
+        }
+
+        /* Header */
+        .header {
+            background-color: #008069;
+            color: white;
+            padding: 35px 15px 15px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 5;
+        }
+
+        .back-btn {
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .avatar:hover {
+            opacity: 0.8;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-size: 16px;
+            font-weight: 500;
+            outline: none;
+            cursor: text;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+        
+        .contact-name:focus {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .contact-name:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .contact-status {
+            font-size: 12px;
+            opacity: 0.8;
+            padding-left: 4px;
+        }
+
+        /* Chat area */
+        .chat-area {
+            flex: 1;
+            padding: 20px 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14.5px;
+            position: relative;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message .time {
+            font-size: 11px;
+            color: rgba(0,0,0,0.45);
+            float: right;
+            margin-top: 5px;
+            margin-left: 10px;
+        }
+
+        /* Incoming message (White) */
+        .msg-incoming {
+            background-color: #fff;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        .msg-incoming::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-top: 10px solid #fff;
+            border-left: 10px solid transparent;
+        }
+
+        /* Outgoing message (Green) */
+        .msg-outgoing {
+            background-color: #d9fdd3;
+            align-self: flex-end;
+            border-top-right-radius: 0;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        .msg-outgoing::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -8px;
+            width: 0;
+            height: 0;
+            border-top: 10px solid #d9fdd3;
+            border-right: 10px solid transparent;
+        }
+
+        /* System message */
+        .msg-system {
+            background-color: #ffeb3b;
+            align-self: center;
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            text-align: center;
+            color: #555;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            background: #ffeb3b80;
+        }
+
+        /* Input area */
+        .input-area {
+            background-color: #f0f2f5;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            padding: 10px 15px;
+            border: none;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .send-btn {
+            background-color: #00a884;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .send-btn:hover {
+            background-color: #008f6f;
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            transform: translateX(2px);
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none;
+            background-color: #fff;
+            align-self: flex-start;
+            border-radius: 8px;
+            padding: 10px 15px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            border-top-left-radius: 0;
+            position: relative;
+        }
+        
+        .typing-indicator span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: #90949c;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-controls">
+        <button class="toggle-btn" onclick="toggleConfig()" id="toggleBtn" title="Ocultar/Mostrar Configurações">👁️</button>
+    </div>
+
+    <!-- Hidden file input for uploading avatars -->
+    <input type="file" id="imageUploader" accept="image/*" style="display: none;">
+
+    <!-- Botão de Gatilho Manual (Canto da Página) -->
+    <button class="manual-trigger-btn" id="manualTriggerBtn" onclick="triggerManual()" title="Disparar Gatilho Manual (n8n)">
+        <span id="triggerIcon">➔</span>
+    </button>
+
+    <div class="config-panel" id="configPanel">
+        <div class="config-row">
+            <strong>Chat Webhook URL:</strong>
+            <input type="text" id="webhookUrl" placeholder="Ex: http://localhost:5678/webhook/SEU-WEBHOOK-ID/chat" value="http://localhost:5678/webhook/026042e6-a99a-4a1a-8fe7-abc0ad6bb167/chat">
+            <button onclick="testConnection()">Testar Conexão</button>
+        </div>
+        <div class="config-row">
+            <strong>Manual Trigger URL:</strong>
+            <input type="text" id="manualWebhookUrl" placeholder="Cole a URL de teste (Test URL) do seu nó Webhook do n8n que fará o papel de Gatilho Manual" value="">
+        </div>
+    </div>
+
+    <div class="simulator-container">
+        <!-- CELULAR DA EMPRESA (Bot) -->
+        <div class="phone" id="phone-empresa">
+            <div class="header">
+                <div class="back-btn">←</div>
+                <div class="avatar" title="Clique para fazer upload da foto do cliente" onclick="changeAvatar('cliente')">
+                    <img id="avatar-cliente" src="https://ui-avatars.com/api/?name=Cliente&background=random" alt="Cliente">
+                </div>
+                <div class="contact-info">
+                    <div class="contact-name" contenteditable="true" spellcheck="false" title="Clique no nome para editar">Cliente</div>
+                    <div class="contact-status">online</div>
+                </div>
+            </div>
+            <div class="chat-area" id="chat-empresa">
+                <div class="msg-system">🔒 Mensagens protegidas com a criptografia de ponta a ponta.</div>
+            </div>
+            <div class="input-area" style="opacity: 0.5; pointer-events: none;">
+                <input type="text" class="input-field" placeholder="O bot responde sozinho..." disabled>
+            </div>
+        </div>
+
+        <!-- CELULAR DO CLIENTE -->
+        <div class="phone" id="phone-cliente">
+            <div class="header">
+                <div class="back-btn">←</div>
+                <div class="avatar" title="Clique para fazer upload da foto da empresa" onclick="changeAvatar('empresa')">
+                    <img id="avatar-empresa" src="https://ui-avatars.com/api/?name=Sorriso+Real&background=008069&color=fff" alt="Empresa">
+                </div>
+                <div class="contact-info">
+                    <div class="contact-name" contenteditable="true" spellcheck="false" title="Clique no nome para editar">Clínica Sorriso Real</div>
+                    <div class="contact-status" id="status-empresa">online</div>
+                </div>
+            </div>
+            <div class="chat-area" id="chat-cliente">
+                <div class="msg-system">🔒 Mensagens protegidas com a criptografia de ponta a ponta.</div>
+                
+                <div class="typing-indicator" id="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="client-input" class="input-field" placeholder="Mensagem" onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sessionId = "session-" + Math.random().toString(36).substr(2, 9);
+        
+        function getTime() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        }
+
+        let currentAvatarType = '';
+        
+        // Listener para quando o usuário seleciona um arquivo no PC
+        document.getElementById('imageUploader').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                if (currentAvatarType) {
+                    document.getElementById(`avatar-${currentAvatarType}`).src = event.target.result;
+                }
+            };
+            reader.readAsDataURL(file);
+            
+            // Reseta o input para permitir selecionar o mesmo arquivo novamente se necessário
+            e.target.value = '';
+        });
+
+        // Altera a foto do perfil abrindo o seletor de arquivos do Windows/Mac
+        function changeAvatar(type) {
+            currentAvatarType = type;
+            document.getElementById('imageUploader').click();
+        }
+
+        // Esconde ou mostra a barra do Webhook com um botão discreto
+        function toggleConfig() {
+            const panel = document.getElementById('configPanel');
+            const btn = document.getElementById('toggleBtn');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'flex';
+                btn.innerText = '👁️';
+                btn.style.color = 'rgba(255, 255, 255, 0.5)';
+                btn.title = 'Ocultar Configurações';
+            } else {
+                panel.style.display = 'none';
+                btn.innerText = '⚙️';
+                btn.style.color = 'rgba(255, 255, 255, 0.2)';
+                btn.title = 'Mostrar Configurações';
+            }
+        }
+
+        function formatWhatsAppText(text) {
+            if (!text) return '';
+            // Protege contra HTML quebrado e tags indesejadas
+            let formatted = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            // Formatação padrão do WhatsApp
+            formatted = formatted.replace(/\*(.*?)\*/g, "<strong>$1</strong>"); // *Negrito*
+            formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>");         // _Itálico_
+            formatted = formatted.replace(/~(.*?)~/g, "<del>$1</del>");       // ~Tachado~
+            
+            // Quebras de linha (\n) viram tags <br>
+            formatted = formatted.replace(/\n/g, "<br>");
+            
+            return formatted;
+        }
+
+        // Adiciona mensagem na tela
+        function renderMessage(text, isFromClient) {
+            const chatCliente = document.getElementById('chat-cliente');
+            const chatEmpresa = document.getElementById('chat-empresa');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const time = getTime();
+            
+            const formattedText = formatWhatsAppText(text);
+
+            const msgClienteDiv = document.createElement('div');
+            msgClienteDiv.className = 'message ' + (isFromClient ? 'msg-outgoing' : 'msg-incoming');
+            msgClienteDiv.innerHTML = `${formattedText} <span class="time">${time} ${isFromClient ? '✓✓' : ''}</span>`;
+            chatCliente.insertBefore(msgClienteDiv, typingIndicator);
+
+            const msgEmpresaDiv = document.createElement('div');
+            msgEmpresaDiv.className = 'message ' + (isFromClient ? 'msg-incoming' : 'msg-outgoing');
+            msgEmpresaDiv.innerHTML = `${formattedText} <span class="time">${time} ${!isFromClient ? '✓✓' : ''}</span>`;
+            chatEmpresa.appendChild(msgEmpresaDiv);
+
+            chatCliente.scrollTop = chatCliente.scrollHeight;
+            chatEmpresa.scrollTop = chatEmpresa.scrollHeight;
+        }
+
+        function setTyping(isTyping) {
+            const indicator = document.getElementById('typing-indicator');
+            const status = document.getElementById('status-empresa');
+            
+            if (isTyping) {
+                indicator.style.display = 'block';
+                status.innerText = 'digitando...';
+            } else {
+                indicator.style.display = 'none';
+                status.innerText = 'online';
+            }
+            
+            const chatCliente = document.getElementById('chat-cliente');
+            chatCliente.scrollTop = chatCliente.scrollHeight;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('client-input');
+            const text = input.value.trim();
+            const webhookUrl = document.getElementById('webhookUrl').value.trim();
+
+            if (!text) return;
+
+            renderMessage(text, true);
+            input.value = '';
+            setTyping(true);
+
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: "sendMessage",
+                        sessionId: sessionId,
+                        chatInput: text
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                let botResponse = data.output || data.text || data.response || JSON.stringify(data);
+                
+                setTyping(false);
+                renderMessage(botResponse, false);
+
+            } catch (error) {
+                console.error("Erro na comunicação com n8n:", error);
+                setTyping(false);
+                renderMessage("⚠️ Falha ao comunicar com a automação. Verifique a URL do Webhook e se o n8n está rodando.", false);
+            }
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('webhookUrl').value.trim();
+            alert(`Atenção: Certifique-se de que o URL inserido termina em '/chat' se estiver usando o Chat Trigger no n8n. O simulador tentará enviar um POST para:\n${url}`);
+        }
+
+        async function triggerManual() {
+            const btn = document.getElementById('manualTriggerBtn');
+            const icon = document.getElementById('triggerIcon');
+            const url = document.getElementById('manualWebhookUrl').value.trim();
+
+            if (!url) {
+                alert("Por favor, cole a URL do Webhook do n8n no campo 'Manual Trigger URL' (nas Configurações) antes de disparar o gatilho.");
+                const panel = document.getElementById('configPanel');
+                if (panel.style.display === 'none') toggleConfig();
+                return;
+            }
+
+            // Ativa animação de loading no chat e no botão
+            setTyping(true);
+            icon.innerHTML = '⏳';
+
+            try {
+                // Requisição padrão (necessário ativar CORS no nó Webhook do n8n nas opções dele)
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: "trigger" })
+                });
+
+                if (!response.ok) throw new Error("Erro HTTP: " + response.status);
+                
+                const data = await response.json();
+                
+                // Tenta extrair a resposta do n8n (pode vir no output do agente ou no body do webhook)
+                let botResponse = data.output || data.text || data.response || (data[0] && data[0].output) || JSON.stringify(data);
+                
+                // Exibe no simulador
+                setTyping(false);
+                if (botResponse && botResponse !== "{}") {
+                    renderMessage(botResponse, false);
+                }
+
+                // Animação de sucesso
+                btn.classList.add('success');
+                icon.innerHTML = '✔';
+
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    icon.innerHTML = '➔';
+                }, 2000);
+            } catch (error) {
+                console.error("Erro no gatilho manual:", error);
+                setTyping(false);
+                icon.innerHTML = '➔';
+                alert("Erro ao disparar! Verifique se no nó Webhook do n8n a opção 'Respond' está como 'Last Node' e se o CORS está ativado.");
+            }
+        }
+    </script>
+</body>
+</html>
